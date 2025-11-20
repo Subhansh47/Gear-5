@@ -11,7 +11,7 @@ app = Flask(__name__)
 app.detected_classes = []
 
 # Set up OpenAI API credentials
-openai.api_key = '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'
+openai.api_key = 'SecretKEY'
 
 # Create a flag to stop webcam capture
 stop_webcam_capture = False
