@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEAR-5</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto&display=swap">
+    <style>
+        body {
+            background-color: #101010;
+            font-family: 'Roboto', sans-serif;
+            text-align: center;
+            color: #FFFFFF;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            background-color: rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #c3d8d0;
+        }
+        .chat-box {
+            border: none;
+            padding: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .user-message {
+            background-color: #007BFF;
+            color: #FFFFFF;
+            border-radius: 15px 15px 0 15px;
+            text-align: right;
+            padding: 10px;
+            margin: 5px;
+        }
+        .bot-message {
+            background-color: #2E2E2E;
+            color: #FFFFFF;
+            border-radius: 15px 15px 15px 0;
+            text-align: left;
+            padding: 10px;
+            margin: 5px;
+        }
+        .input-box {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .message-input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 15px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: #FFFFFF;
+        }
+        .send-button {
+            background-color: #007BFF;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 15px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .send-button:hover {
+            background-color: #0056B3;
+        }
+        #webcam-button {
+            background-color: #007BFF;
+            color: #FFFFFF ;
+            border: none;
+            border-radius: 15px;
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: block;
+            margin: 0 auto;
+        }
+        #webcam-button:hover {
+            background-color: #0056B3;
+        }
+        #webcam-video-container {
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 20px;
+            display: none;
+        }
+        .webcam-video {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GEAR-5</h1>
+        <div class="chat-box" id="chat-box">
+            <div class="bot-message">
+                <p>Welcome! How can I assist you today?</p>
+            </div>
+        </div>
+
+        <div class="input-box">
+            <input type="text" class="message-input" id="user-input" placeholder="Type your message...">
+            <button class="send-button" id="send-button">Send</button>
+        </div>
+
+        <div class="box">
+            <!-- Start/Stop Webcam Button -->
+            <button id="webcam-button" class="btn btn-lg btn-primary btn-block" onclick="toggleWebcam()">Start Webcam</button>
+        </div>
+
+        <!-- Container for Video Element -->
+        <div id="webcam-video-container">
+            <!-- Video Element to Display Webcam Stream -->
+            <video id="webcam-video" class="webcam-video" autoplay></video>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById("chat-box");
+        const userInput = document.getElementById("user-input");
+        const sendButton = document.getElementById("send-button");
+        const webcamButton = document.getElementById("webcam-button");
+        const videoElement = document.getElementById('webcam-video');
+        const videoContainer = document.getElementById('webcam-video-container');
+        let webcamStream = null;
+
+        sendButton.addEventListener("click", () => {
+            const userMessage = userInput.value;
+            appendMessage(userMessage, "user-message");
+
+            // Send the user's message to the server
+            fetch("/api", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ message: userMessage })
+            })
+            .then(response => response.json())
+            .then(botResponse => {
+                console.log(botResponse)
+                // Display the bot's response in the chat box
+                if(botResponse.response.content){
+                    appendMessage(botResponse.response.content, "bot-message");
+                }
+                else{
+                    appendMessage(botResponse.response, "bot-message");
+                }
+            });
+
+            userInput.value = "";
+        });
+
+        function appendMessage(message, className) {
+            const messageElement = document.createElement("div");
+            messageElement.classList.add(className);
+            messageElement.innerHTML = `<p>${message}</p>`;
+            chatBox.appendChild(messageElement);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function toggleWebcam() {
+            if (!webcamStream) {
+                // startWebcam();
+
+                // Navigate to the /opencam route
+                fetch("/opencam", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.detected_classes) {
+                        // Display the detected classes in the chat box
+                        const detectedClasses = data.detected_classes.join(", ");
+                        appendMessage(`Detected Classes: ${detectedClasses}`, "bot-message");
+                    } else {
+                        // Handle the case where no detected classes are available
+                        appendMessage("No classes detected.", "bot-message");
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching detected classes:', error);
+                    // Handle any errors that occur during the fetch
+                    appendMessage("Error fetching detected classes.", "bot-message");
+                });
+            } else {
+                closeWebcam();
+            }
+        }
+
+        function startWebcam() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => {
+                webcamStream = stream;
+                videoElement.srcObject = stream;
+                videoElement.style.display = 'block';
+                videoContainer.style.display = 'block'; // Show the video container
+                webcamButton.textContent = 'Close Webcam';
+            })
+            .catch(error => {
+                console.error('Error accessing webcam:', error);
+            });
+        }
+
+        function closeWebcam() {
+            if (webcamStream) {
+                const tracks = webcamStream.getTracks();
+                tracks.forEach(track => track.stop());
+                videoElement.srcObject = null;
+                videoElement.style.display = 'none';
+                videoContainer.style.display = 'none'; // Hide the video container
+                webcamButton.textContent = 'Start Webcam';
+                webcamStream = null;
+            }
+        }
+    </script>
+</body>
+</html>
